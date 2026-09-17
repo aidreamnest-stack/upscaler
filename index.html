@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Upscaler</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #080A0E;
+      --card-bg: #0F131C;
+      --card-border: #1B2230;
+      --card-hover: #242D40;
+      --accent: #BDEC1F;
+      --accent-hover: #D4FF33;
+      --accent-dark: #8FB509;
+      --accent-glow: rgba(189, 236, 31, 0.15);
+      --text-primary: #F8FAFC;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      --surface-inner: #0A0D14;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+    /* Top Navigation */
+    nav.navbar { width: 100%; border-bottom: 1px solid var(--card-border); background: rgba(8, 10, 14, 0.9); backdrop-filter: blur(16px); position: sticky; top: 0; z-index: 100; }
+    .nav-content { max-width: 1400px; margin: 0 auto; height: 58px; padding: 0 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    .brand-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; color: #fff; font-weight: 800; font-size: 1.05rem; letter-spacing: -0.02em; }
+    .brand-badge { background: rgba(189, 236, 31, 0.12); border: 1px solid rgba(189, 236, 31, 0.3); color: var(--accent); padding: 2px 7px; border-radius: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    
+    .nav-status { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-secondary); background: #131824; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--card-border); font-family: 'JetBrains Mono', monospace; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+
+    /* Main Container */
+    main.main-layout { max-width: 1400px; width: 100%; margin: 0 auto; padding: 1.25rem 1.5rem 3rem; display: flex; flex-direction: column; gap: 1.25rem; flex: 1; }
+
+    /* Header Bar */
+    .studio-header { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .studio-title { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; color: #FFFFFF; display: flex; align-items: center; gap: 8px; }
+    .studio-subtitle { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; }
+    .studio-pills { display: flex; gap: 8px; }
+    .studio-pill { font-size: 11px; padding: 4px 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--card-border); border-radius: 6px; color: var(--text-secondary); font-weight: 600; }
+
+    /* Workbench Grid */
+    .workbench-grid { display: grid; grid-template-columns: 350px 1fr; gap: 1.25rem; align-items: stretch; }
+    @media (max-width: 980px) { .workbench-grid { grid-template-columns: 1fr; } }
+
+    /* Left Control Sidebar */
+    .control-panel { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.9rem; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .panel-header { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.4rem; border-bottom: 1px solid var(--card-border); }
+
+    /* Dropzone Upload */
+    .dropzone { border: 1.5px dashed var(--card-border); border-radius: 10px; padding: 1.2rem 1rem; text-align: center; cursor: pointer; transition: all 0.2s ease; background: var(--surface-inner); }
+    .dropzone:hover, .dropzone.dragover { border-color: var(--accent); background: var(--accent-glow); }
+    .drop-icon { font-size: 1.5rem; margin-bottom: 0.3rem; }
+    .drop-title { font-size: 0.825rem; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
+    .drop-hint { font-size: 0.7rem; color: var(--text-muted); }
+
+    /* Controls */
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-label { font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; }
+    .form-select { background: var(--surface-inner); border: 1px solid var(--card-border); color: var(--text-primary); padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; outline: none; transition: border-color 0.15s; }
+    .form-select:focus { border-color: var(--accent); }
+
+    /* Multiplier Cards */
+    .scale-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .scale-btn { background: var(--surface-inner); border: 1px solid var(--card-border); border-radius: 8px; padding: 7px 4px; text-align: center; cursor: pointer; transition: all 0.15s ease; }
+    .scale-btn:hover { border-color: rgba(189,236,31,0.5); }
+    .scale-btn.active { background: rgba(189, 236, 31, 0.08); border-color: var(--accent); color: var(--accent); }
+    .scale-btn-val { font-size: 0.95rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+    .scale-btn-sub { font-size: 9px; color: var(--text-muted); font-weight: 600; margin-top: 1px; }
+    .scale-btn.active .scale-btn-sub { color: rgba(189,236,31,0.8); }
+
+    /* TTA Checkbox Row */
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface-inner); padding: 7px 12px; border-radius: 8px; border: 1px solid var(--card-border); cursor: pointer; }
+    .toggle-row input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+
+    /* Main CTA Buttons - HIGH CONTRAST & ACCENT HOVER */
+    .btn-action { 
+      background: var(--accent) !important; 
+      color: #080A0E !important; 
+      border: none; 
+      height: 44px; 
+      border-radius: 8px; 
+      font-weight: 800; 
+      font-size: 0.88rem; 
+      cursor: pointer; 
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      gap: 8px; 
+      width: 100%; 
+      margin-top: 0.2rem; 
+    }
+    .btn-action:hover:not(:disabled) { 
+      background: #D4FF33 !important; 
+      color: #000000 !important; 
+      transform: translateY(-1px); 
+      box-shadow: 0 4px 20px rgba(189, 236, 31, 0.35); 
+    }
+    .btn-action:active:not(:disabled) { 
+      transform: translateY(0); 
+    }
+    .btn-action:disabled { 
+      opacity: 0.35; 
+      cursor: not-allowed; 
+      background: var(--card-border) !important; 
+      color: var(--text-muted) !important; 
+      transform: none; 
+      box-shadow: none; 
+    }
+
+    /* Right Studio Stage Card */
+    .stage-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 1rem; min-height: 560px; display: flex; flex-direction: column; gap: 0.75rem; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+
+    .stage-topbar { display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.5rem; border-bottom: 1px solid var(--card-border); }
+    .stage-title-wrap { display: flex; align-items: center; gap: 8px; }
+    .stage-title { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); }
+    .stage-file-badge { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--accent); background: rgba(189,236,31,0.1); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(189,236,31,0.2); }
+
+    .stage-tools { display: flex; gap: 8px; align-items: center; }
+    .view-mode-pill { display: flex; background: var(--surface-inner); padding: 2px; border-radius: 6px; border: 1px solid var(--card-border); }
+    .mode-btn { background: transparent; border: none; padding: 4px 9px; font-size: 11px; font-weight: 700; color: var(--text-secondary); border-radius: 5px; cursor: pointer; transition: all 0.15s; }
+    .mode-btn:hover { color: #fff; }
+    .mode-btn.active { background: #1E2533; color: var(--accent); }
+
+    /* Canvas Viewport Frame */
+    .viewport-frame { 
+      position: relative; 
+      width: 100%; 
+      flex: 1; 
+      min-height: 460px; 
+      background: radial-gradient(circle at center, #111520 0%, #06080C 100%); 
+      border-radius: 10px; 
+      border: 1px solid var(--card-border); 
+      overflow: hidden; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      user-select: none; 
+    }
+    
+    .placeholder-state { text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 2rem; }
+    .placeholder-icon { font-size: 2.25rem; opacity: 0.35; margin-bottom: 2px; }
+
+    /* Active Preview State */
+    .preview-state { width: 100%; height: 100%; position: absolute; inset: 0; display: none; align-items: center; justify-content: center; overflow: hidden; }
+    .preview-state img { width: 100%; height: 100%; object-fit: contain; }
+
+    /* Progress Overlay Inside Stage */
+    .progress-overlay { 
+      position: absolute; 
+      inset: 0; 
+      background: rgba(6, 8, 12, 0.9); 
+      backdrop-filter: blur(12px); 
+      z-index: 50; 
+      display: none; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center; 
+      padding: 2rem; 
+      gap: 1.15rem; 
+      text-align: center; 
+    }
+
+    .pulse-indicator { width: 44px; height: 44px; border-radius: 50%; background: var(--accent-glow); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; animation: pulseGlow 1.5s infinite ease-in-out; }
+    @keyframes pulseGlow { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(189,236,31,0.4); } 50% { transform: scale(1.06); box-shadow: 0 0 20px 6px rgba(189,236,31,0.25); } }
+
+    .progress-bar-bg { width: 100%; max-width: 440px; height: 8px; background: #151A24; border-radius: 999px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); }
+    .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #8FB509, #BDEC1F); border-radius: 999px; transition: width 0.15s linear; }
+
+    /* HIGH-PRECISION REAL-TIME STATS ROW */
+    .stats-ticking-row { display: flex; gap: 20px; font-size: 0.8rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; background: rgba(0,0,0,0.6); padding: 8px 18px; border-radius: 8px; border: 1px solid var(--card-border); }
+    .stat-val { font-weight: 700; color: #fff; }
+    .stat-accent { font-weight: 700; color: var(--accent); }
+
+    /* Active Comparison Stage (Split Mode) */
+    .comparison-stage { width: 100%; height: 100%; position: absolute; inset: 0; display: none; overflow: hidden; }
+    .stage-img-after { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+    
+    .stage-overlay-before { position: absolute; top: 0; left: 0; width: 50%; height: 100%; overflow: hidden; border-right: 2px solid var(--accent); background: #06080C; }
+    .stage-overlay-before img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
+
+    .split-handle { position: absolute; top: 0; left: 50%; width: 34px; height: 100%; transform: translateX(-50%); cursor: ew-resize; display: flex; align-items: center; justify-content: center; z-index: 30; }
+    .handle-knob { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #080A0E; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; box-shadow: 0 4px 14px rgba(0,0,0,0.7); }
+
+    .badge-tag { position: absolute; top: 12px; padding: 4px 10px; background: rgba(6, 8, 12, 0.85); backdrop-filter: blur(4px); border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; z-index: 20; }
+    .badge-before { left: 12px; color: var(--text-muted); border: 1px solid var(--card-border); }
+    .badge-after { right: 12px; color: var(--accent); border: 1px solid rgba(189,236,31,0.3); }
+
+    /* Side-by-Side Comparison Mode */
+    .side-by-side-stage { width: 100%; height: 100%; position: absolute; inset: 0; display: none; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--card-border); }
+    .side-card { position: relative; width: 100%; height: 100%; background: #06080C; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .side-card img { width: 100%; height: 100%; object-fit: contain; }
+
+    /* Result Action Bar below Viewport */
+    .result-strip { display: none; align-items: center; justify-content: space-between; padding-top: 0.35rem; gap: 1rem; flex-wrap: wrap; }
+    .meta-metrics { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
+    .meta-badge { background: #141A26; border: 1px solid var(--card-border); padding: 3px 8px; border-radius: 5px; color: #fff; }
+    .meta-highlight { color: var(--accent); font-weight: 700; }
+
+    .btn-download { 
+      background: var(--accent) !important; 
+      color: #080A0E !important; 
+      border: none; 
+      padding: 0 18px; 
+      height: 38px; 
+      border-radius: 7px; 
+      font-weight: 700; 
+      font-size: 0.825rem; 
+      cursor: pointer; 
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1); 
+      display: flex; 
+      align-items: center; 
+      gap: 6px; 
+    }
+    .btn-download:hover { 
+      background: #D4FF33 !important; 
+      color: #000000 !important; 
+      transform: translateY(-1px); 
+      box-shadow: 0 4px 16px rgba(189, 236, 31, 0.3); 
+    }
+
+    /* Enterprise Features Grid */
+    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    @media (max-width: 800px) { .features-grid { grid-template-columns: 1fr; } }
+    .feature-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 1.1rem; display: flex; flex-direction: column; gap: 6px; }
+    .feature-icon { font-size: 1.3rem; margin-bottom: 2px; }
+    .feature-title { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); }
+    .feature-desc { font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; }
+
+    /* Footer */
+    footer { border-top: 1px solid var(--card-border); margin-top: auto; padding: 1.5rem 0; background: var(--surface-inner); text-align: center; font-size: 0.75rem; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="nav-content">
+      <a href="#" class="brand-logo">
+        <span style="color: var(--accent);">⚡</span> Image Upscaler
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main Layout -->
+  <main class="main-layout">
+    
+    <!-- Studio Header -->
+    <div class="studio-header">
+      <div>
+        <h1 class="studio-title">Image Upscaler</h1>
+        <p class="studio-subtitle">Upscale your images locally using your GPU.</p>
+      </div>
+    </div>
+
+    <!-- Workbench Studio Grid -->
+    <section class="workbench-grid">
+      
+      <!-- Left: Studio Controls -->
+      <div class="control-panel">
+        <div class="panel-header">
+          <span>Engine Settings</span>
+          <span style="color: var(--accent); font-family: 'JetBrains Mono';">vulkan-ncnn</span>
+        </div>
+
+        <!-- Upload Dropzone -->
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+          <div class="drop-icon">📁</div>
+          <div class="drop-title" id="dropTitle">Choose or Drop Image</div>
+          <div class="drop-hint">PNG, JPG, WEBP</div>
+          <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        </div>
+
+        <!-- Model Selector -->
+        <div class="form-group">
+          <div class="form-label">
+            <span>Model</span>
+          </div>
+          <select class="form-select" id="modelSelect">
+            <option value="realesrgan-x4plus">realesrgan-x4plus</option>
+            <option value="realesrgan-x4plus-anime">realesrgan-x4plus-anime</option>
+            <option value="realesr-animevideov3">realesr-animevideov3</option>
+          </select>
+        </div>
+
+        <!-- Scale Multiplier Cards -->
+        <div class="form-group">
+          <div class="form-label">
+            <span>Upscale Factor</span>
+            <span style="color: var(--accent); font-family: 'JetBrains Mono';" id="scaleLabel">4X UHD</span>
+          </div>
+          <div class="scale-cards">
+            <div class="scale-btn" onclick="selectScale('2', this)">
+              <div class="scale-btn-val">2X</div>
+              <div class="scale-btn-sub">Crisp HD</div>
+            </div>
+            <div class="scale-btn active" onclick="selectScale('4', this)">
+              <div class="scale-btn-val">4X</div>
+              <div class="scale-btn-sub">4K UHD</div>
+            </div>
+            <div class="scale-btn" onclick="selectScale('8', this)">
+              <div class="scale-btn-val">8X</div>
+              <div class="scale-btn-sub">8K Master</div>
+            </div>
+          </div>
+          <input type="hidden" id="scaleSelect" value="4">
+        </div>
+
+        <!-- GPU Selector -->
+        <div class="form-group">
+          <div class="form-label">
+            <span>GPU Device</span>
+          </div>
+          <select class="form-select" id="gpuSelect">
+            <option value="auto">Auto (Dedicated NVIDIA RTX GPU)</option>
+            <option value="1">NVIDIA GeForce RTX 3050 Laptop GPU</option>
+            <option value="0">AMD Radeon(TM) 660M Integrated GPU</option>
+          </select>
+        </div>
+
+        <!-- TTA Mode Toggle -->
+        <div class="toggle-row" onclick="toggleTTA()">
+          <div>
+            <div style="font-size: 0.78rem; font-weight: 700;">TTA (Test-Time Augmentation)</div>
+            <div style="font-size: 0.68rem; color: var(--text-muted);">Enhances quality but increases processing time</div>
+          </div>
+          <input type="checkbox" id="ttaCheckbox" onclick="event.stopPropagation()">
+        </div>
+
+        <button class="btn-action" id="upscaleBtn" disabled onclick="startUpscale()">
+          <span>Upscale Image</span>
+        </button>
+      </div>
+
+      <!-- Right: Main Interactive Stage Card -->
+      <div class="stage-card">
+        <div class="stage-topbar">
+          <div class="stage-title-wrap">
+            <span class="stage-title">Preview</span>
+            <span class="stage-file-badge" id="stageFileBadge">No Image Loaded</span>
+          </div>
+          
+          <div class="stage-tools">
+            <div class="view-mode-pill">
+              <button class="mode-btn active" id="btnModeSplit" onclick="setViewMode('split')">Split Curtain</button>
+              <button class="mode-btn" id="btnModeSide" onclick="setViewMode('side')">Side-by-Side</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Viewport Canvas Frame -->
+        <div class="viewport-frame" id="viewportFrame">
+          
+          <!-- Empty State Placeholder -->
+          <div class="placeholder-state" id="placeholderState">
+            <div class="pulse-indicator" style="animation:none; opacity:0.6; margin-bottom:4px;">✨</div>
+            <div style="font-size: 0.85rem; font-weight: 700; color: #fff;">Drop or select an image on the left panel</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted);">Interactive Before / After comparison stage will render here in real-time</div>
+          </div>
+
+          <!-- Active Preview State -->
+          <div class="preview-state" id="previewState">
+            <span class="badge-tag badge-before" style="z-index: 10;">Original Preview</span>
+            <img id="imgPreview" src="" alt="Preview">
+          </div>
+
+          <!-- Live Progress Processing Overlay with REAL-TIME Stopwatch -->
+          <div class="progress-overlay" id="progressOverlay">
+            <div class="pulse-indicator">⚡</div>
+            
+            <div>
+              <div style="font-size: 0.95rem; font-weight: 800; color: var(--accent); margin-bottom: 3px;" id="stageStatusText">Initializing...</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Processing image...</div>
+            </div>
+            
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
+
+            <!-- REAL HIGH-PRECISION TICKING STOPWATCH & DYNAMIC ESTIMATE -->
+            <div class="stats-ticking-row">
+              <span>⏱️ Elapsed: <span class="stat-val" id="elapsedVal">0.0s</span></span>
+              <span>⚡ Progress: <span class="stat-accent" id="pctVal">0.0%</span></span>
+              <span>⏳ Remaining: <span class="stat-val" id="etaVal">~2.5s</span></span>
+            </div>
+          </div>
+
+          <!-- Active Comparison Stage (Split Curtain Mode) -->
+          <div class="comparison-stage" id="comparisonStage">
+            <span class="badge-tag badge-before">Original</span>
+            <span class="badge-tag badge-after" id="badgeAfter">4K Upscaled</span>
+
+            <!-- Right: Upscaled Image -->
+            <img class="stage-img-after" id="imgAfter" src="" alt="Upscaled Result">
+
+            <!-- Left: Original Image Clipped -->
+            <div class="stage-overlay-before" id="overlayBefore">
+              <img id="imgBefore" src="" alt="Original Source">
+            </div>
+
+            <!-- Split Handle -->
+            <div class="split-handle" id="splitHandle">
+              <div class="handle-knob">↔</div>
+            </div>
+          </div>
+
+          <!-- Side-by-Side Comparison Stage -->
+          <div class="side-by-side-stage" id="sideBySideStage">
+            <div class="side-card">
+              <span class="badge-tag badge-before">Original</span>
+              <img id="imgBeforeSide" src="" alt="Original">
+            </div>
+            <div class="side-card">
+              <span class="badge-tag badge-after" id="badgeAfterSide">4K Upscaled</span>
+              <img id="imgAfterSide" src="" alt="Upscaled">
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Result Action Bar below Viewport -->
+        <div class="result-strip" id="resultStrip">
+          <div class="meta-metrics">
+            <span class="meta-badge" id="metricDims">512×512 ➔ 2048×2048</span>
+            <span class="meta-badge" id="metricSize">120KB ➔ 2.4MB</span>
+            <span class="meta-badge">Total Time: <strong class="meta-highlight" id="timeVal">0.00s</strong></span>
+          </div>
+
+          <button class="btn-download" onclick="triggerDownload()">
+            <span>⬇️ Download Master PNG</span>
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div style="max-width: 1400px; margin: 0 auto; padding: 1.5rem 1.5rem;">
+      <span>© 2026 Image Upscaler.</span>
+    </div>
+  </footer>
+
+  <script>
+    let selectedFile = null;
+    let selectedImgWidth = 0;
+    let selectedImgHeight = 0;
+    let currentUpscaledUrl = null;
+    let activeReader = null;
+    let stopwatchInterval = null;
+    let startTimeMs = 0;
+    let currentMode = 'split';
+    let latestServerPct = 0;
+    let estimatedTotalTimeSec = 3.0; // Baseline dynamic estimate
+
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const dropTitle = document.getElementById('dropTitle');
+    const upscaleBtn = document.getElementById('upscaleBtn');
+    const modelSelect = document.getElementById('modelSelect');
+    const scaleSelect = document.getElementById('scaleSelect');
+    const gpuSelect = document.getElementById('gpuSelect');
+    const ttaCheckbox = document.getElementById('ttaCheckbox');
+    
+    const placeholderState = document.getElementById('placeholderState');
+    const previewState = document.getElementById('previewState');
+    const imgPreview = document.getElementById('imgPreview');
+    const progressOverlay = document.getElementById('progressOverlay');
+    const comparisonStage = document.getElementById('comparisonStage');
+    const sideBySideStage = document.getElementById('sideBySideStage');
+    const resultStrip = document.getElementById('resultStrip');
+
+    const progressFill = document.getElementById('progressFill');
+    const stageStatusText = document.getElementById('stageStatusText');
+    const elapsedVal = document.getElementById('elapsedVal');
+    const pctVal = document.getElementById('pctVal');
+    const etaVal = document.getElementById('etaVal');
+
+    const imgBefore = document.getElementById('imgBefore');
+    const imgAfter = document.getElementById('imgAfter');
+    const imgBeforeSide = document.getElementById('imgBeforeSide');
+    const imgAfterSide = document.getElementById('imgAfterSide');
+    const stageFileBadge = document.getElementById('stageFileBadge');
+
+    function toggleTTA() {
+      ttaCheckbox.checked = !ttaCheckbox.checked;
+    }
+
+    function selectScale(val, el) {
+      scaleSelect.value = val;
+      document.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      let label = val === '2' ? 'HD' : (val === '8' ? 'Master' : 'UHD');
+      document.getElementById('scaleLabel').innerText = val + 'X ' + label;
+    }
+
+    function setViewMode(mode) {
+      currentMode = mode;
+      document.getElementById('btnModeSplit').classList.toggle('active', mode === 'split');
+      document.getElementById('btnModeSide').classList.toggle('active', mode === 'side');
+      
+      if (currentUpscaledUrl) {
+        if (mode === 'split') {
+          comparisonStage.style.display = 'block';
+          sideBySideStage.style.display = 'none';
+          syncOverlaySize();
+        } else {
+          comparisonStage.style.display = 'none';
+          sideBySideStage.style.display = 'grid';
+        }
+      }
+    }
+
+    // Drag & Drop
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) handleFileSelect(e.target.files[0]);
+    });
+
+    function handleFileSelect(file) {
+      selectedFile = file;
+      dropTitle.innerHTML = '<strong>' + file.name + '</strong> (' + (file.size / 1024).toFixed(1) + ' KB)';
+      stageFileBadge.innerText = file.name + ' · Ready';
+      upscaleBtn.disabled = false;
+
+      // Extract image dimensions for precise ETA benchmark
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const testImg = new Image();
+        testImg.onload = () => {
+          selectedImgWidth = testImg.width;
+          selectedImgHeight = testImg.height;
+          // RTX 3050 Benchmark calculation: (Megapixels * ScaleFactor)
+          const mp = (testImg.width * testImg.height) / 1000000;
+          const scale = parseInt(scaleSelect.value || '4');
+          if (scale === 8) {
+            estimatedTotalTimeSec = Math.max(3.5, mp * 8.0 + 2.0);
+          } else if (scale === 2) {
+            estimatedTotalTimeSec = Math.max(1.2, mp * 1.5 + 0.8);
+          } else {
+            estimatedTotalTimeSec = Math.max(1.8, mp * 3.5 + 1.0);
+          }
+        };
+        testImg.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+
+      // Show Preview
+      placeholderState.style.display = 'none';
+      comparisonStage.style.display = 'none';
+      sideBySideStage.style.display = 'none';
+      resultStrip.style.display = 'none';
+      previewState.style.display = 'flex';
+      imgPreview.src = URL.createObjectURL(file);
+    }
+
+    // REAL CONTINUOUS 100ms STOPWATCH & INTERPOLATED PROGRESS / ETA
+    function startRealTimeStopwatch() {
+      startTimeMs = performance.now();
+      latestServerPct = 0;
+      
+      if (stopwatchInterval) clearInterval(stopwatchInterval);
+      
+      stopwatchInterval = setInterval(() => {
+        const elapsedSec = (performance.now() - startTimeMs) / 1000;
+        elapsedVal.innerText = elapsedSec.toFixed(1) + 's';
+
+        // Continuous progress interpolation so progress bar never stays frozen
+        let currentDisplayPct = latestServerPct;
+        if (latestServerPct < 95) {
+          // Time-based smooth continuous progress estimation
+          const timePct = Math.min(92, (elapsedSec / estimatedTotalTimeSec) * 100);
+          currentDisplayPct = Math.max(latestServerPct, timePct);
+        }
+        
+        progressFill.style.width = currentDisplayPct.toFixed(1) + '%';
+        pctVal.innerText = currentDisplayPct.toFixed(1) + '%';
+
+        // REAL DYNAMIC REMAINING SECONDS
+        let remainingSec = 0;
+        if (latestServerPct > 10 && latestServerPct < 98) {
+          const actualTotalSec = elapsedSec / (latestServerPct / 100);
+          remainingSec = Math.max(0.1, actualTotalSec - elapsedSec);
+        } else {
+          remainingSec = Math.max(0.2, estimatedTotalTimeSec - elapsedSec);
+        }
+
+        if (remainingSec > 60) {
+          const m = Math.floor(remainingSec / 60);
+          const s = Math.round(remainingSec % 60);
+          etaVal.innerText = '~' + m + 'm ' + s + 's';
+        } else {
+          etaVal.innerText = '~' + remainingSec.toFixed(1) + 's';
+        }
+      }, 100);
+    }
+
+    function stopRealTimeStopwatch() {
+      if (stopwatchInterval) {
+        clearInterval(stopwatchInterval);
+        stopwatchInterval = null;
+      }
+    }
+
+    async function startUpscale() {
+      if (!selectedFile) return;
+
+      upscaleBtn.disabled = true;
+      placeholderState.style.display = 'none';
+      previewState.style.display = 'none';
+      comparisonStage.style.display = 'none';
+      sideBySideStage.style.display = 'none';
+      resultStrip.style.display = 'none';
+      progressOverlay.style.display = 'flex';
+
+      progressFill.style.width = '0%';
+      pctVal.innerText = '0.0%';
+      elapsedVal.innerText = '0.0s';
+      etaVal.innerText = '~' + estimatedTotalTimeSec.toFixed(1) + 's';
+      stageStatusText.innerText = 'Initializing...';
+
+      startRealTimeStopwatch();
+
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+      formData.append('model', modelSelect.value);
+      formData.append('scale', scaleSelect.value);
+      formData.append('gpu', gpuSelect.value);
+      formData.append('tta', ttaCheckbox.checked ? 'true' : 'false');
+
+      try {
+        const response = await fetch('/api/upscale', {
+          method: 'POST',
+          body: formData
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop();
+
+          for (const chunk of lines) {
+            const trimmed = chunk.trim();
+            if (trimmed.startsWith('data: ')) {
+              try {
+                const jsonStr = trimmed.substring(6).trim();
+                const data = JSON.parse(jsonStr);
+                handleSSEData(data);
+              } catch (e) {
+                console.warn('SSE parse error:', e);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        stopRealTimeStopwatch();
+        alert('Upscale Exception: ' + err.message);
+        progressOverlay.style.display = 'none';
+        if (selectedFile) previewState.style.display = 'flex';
+        else placeholderState.style.display = 'flex';
+      } finally {
+        upscaleBtn.disabled = false;
+        if (activeReader) {
+          try { activeReader.cancel(); } catch(e){}
+          activeReader = null;
+        }
+      }
+    }
+
+    function handleSSEData(data) {
+      if (data.type === 'start') {
+        stageStatusText.innerText = data.message;
+      } else if (data.type === 'progress') {
+        stageStatusText.innerText = data.stage || 'Processing...';
+        const pct = Math.min(99.5, Math.max(0, data.percent));
+        latestServerPct = pct;
+      } else if (data.type === 'complete') {
+        stopRealTimeStopwatch();
+        progressFill.style.width = '100%';
+        pctVal.innerText = '100%';
+        elapsedVal.innerText = data.time_sec + 's';
+        etaVal.innerText = '0.0s (Done)';
+
+        currentUpscaledUrl = data.upscaled_url;
+
+        const origImg = new Image();
+        origImg.src = URL.createObjectURL(selectedFile);
+        origImg.onload = () => { 
+          imgBefore.src = origImg.src; 
+          imgBeforeSide.src = origImg.src; 
+        };
+
+        const upImg = new Image();
+        upImg.src = data.upscaled_url + '?t=' + Date.now();
+        upImg.onload = () => {
+          imgAfter.src = upImg.src;
+          imgAfterSide.src = upImg.src;
+          progressOverlay.style.display = 'none';
+
+          if (currentMode === 'split') {
+            comparisonStage.style.display = 'block';
+            sideBySideStage.style.display = 'none';
+            syncOverlaySize();
+          } else {
+            comparisonStage.style.display = 'none';
+            sideBySideStage.style.display = 'grid';
+          }
+          resultStrip.style.display = 'flex';
+
+          const scaleVal = data.scale || scaleSelect.value;
+          document.getElementById('badgeAfter').innerText = scaleVal + 'X Upscaled';
+          document.getElementById('badgeAfterSide').innerText = scaleVal + 'X Upscaled';
+          document.getElementById('timeVal').innerText = data.time_sec + 's';
+          
+          if (data.orig_dims && data.out_dims) {
+            document.getElementById('metricDims').innerText = data.orig_dims[0] + '×' + data.orig_dims[1] + ' ➔ ' + data.out_dims[0] + '×' + data.out_dims[1];
+          }
+          if (data.orig_size_kb && data.out_size_kb) {
+            document.getElementById('metricSize').innerText = data.orig_size_kb + ' KB ➔ ' + (data.out_size_kb > 1024 ? (data.out_size_kb / 1024).toFixed(2) + ' MB' : data.out_size_kb + ' KB');
+          }
+        };
+      } else if (data.type === 'error') {
+        stopRealTimeStopwatch();
+        alert('Error: ' + data.message);
+        progressOverlay.style.display = 'none';
+        if (selectedFile) previewState.style.display = 'flex';
+        else placeholderState.style.display = 'flex';
+      }
+    }
+
+    function triggerDownload() {
+      if (!currentUpscaledUrl) return;
+      const downloadUrl = currentUpscaledUrl + '?download=1';
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = downloadUrl;
+      a.download = 'upscaled_master_' + Date.now() + '.png';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => document.body.removeChild(a), 100);
+    }
+
+    // Split Slider Drag Logic
+    const viewportFrame = document.getElementById('viewportFrame');
+    const overlayBefore = document.getElementById('overlayBefore');
+    const splitHandle = document.getElementById('splitHandle');
+    let isDragging = false;
+
+    function syncOverlaySize() {
+      const w = viewportFrame.offsetWidth;
+      imgBefore.style.width = w + 'px';
+    }
+    window.addEventListener('resize', syncOverlaySize);
+
+    function moveSplitter(e) {
+      if (!isDragging) return;
+      const rect = viewportFrame.getBoundingClientRect();
+      let x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+      x = Math.max(0, Math.min(x, rect.width));
+      const pct = (x / rect.width) * 100;
+      overlayBefore.style.width = pct + '%';
+      splitHandle.style.left = pct + '%';
+    }
+
+    splitHandle.addEventListener('mousedown', () => isDragging = true);
+    window.addEventListener('mouseup', () => isDragging = false);
+    window.addEventListener('mousemove', moveSplitter);
+
+    splitHandle.addEventListener('touchstart', () => isDragging = true);
+    window.addEventListener('touchend', () => isDragging = false);
+    window.addEventListener('touchmove', moveSplitter);
+  </script>
+</body>
+</html>
