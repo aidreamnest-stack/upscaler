@@ -262,12 +262,32 @@ class UpscaleHandler(SimpleHTTPRequestHandler):
                         send_event({'type': 'error', 'message': '8X Pass 2 failed'})
                         return
                 elif scale == '2':
-                    cmd = [EXE_PATH, '-i', input_path, '-o', output_path, '-m', models_dir, '-n', model_name, '-s', '2', '-f', 'png'] + gpu_flags
-                    if enable_tta: cmd.append('-x')
-                    ret = run_process_with_progress(cmd, '2X HD Super-Resolution', 0, 100)
-                    if ret != 0 or not os.path.exists(output_path):
-                        send_event({'type': 'error', 'message': '2X upscale failed'})
-                        return
+                    if model_name == 'realesr-animevideov3':
+                        cmd = [EXE_PATH, '-i', input_path, '-o', output_path, '-m', models_dir, '-n', model_name, '-s', '2', '-f', 'png'] + gpu_flags
+                        if enable_tta: cmd.append('-x')
+                        ret = run_process_with_progress(cmd, '2X HD Super-Resolution', 0, 100)
+                        if ret != 0 or not os.path.exists(output_path):
+                            send_event({'type': 'error', 'message': '2X upscale failed'})
+                            return
+                    else:
+                        # 4X neural models need 4X pass followed by Lanczos downscale to avoid NCNN tile seam distortion
+                        pass2x_temp = os.path.join(OUTPUTS_DIR, f'temp_2x_{timestamp}.png')
+                        cmd = [EXE_PATH, '-i', input_path, '-o', pass2x_temp, '-m', models_dir, '-n', model_name, '-s', '4', '-f', 'png'] + gpu_flags
+                        if enable_tta: cmd.append('-x')
+                        ret = run_process_with_progress(cmd, '2X HD Neural Reconstruction', 0, 95)
+                        if ret != 0 or not os.path.exists(pass2x_temp):
+                            send_event({'type': 'error', 'message': '2X upscale pass failed'})
+                            return
+                        try:
+                            with Image.open(pass2x_temp) as im4:
+                                target_w = orig_w * 2 if orig_w > 0 else im4.width // 2
+                                target_h = orig_h * 2 if orig_h > 0 else im4.height // 2
+                                im2 = im4.resize((target_w, target_h), Image.Resampling.LANCZOS)
+                                im2.save(output_path, format='PNG')
+                        finally:
+                            if os.path.exists(pass2x_temp):
+                                try: os.remove(pass2x_temp)
+                                except: pass
                 else:
                     cmd = [EXE_PATH, '-i', input_path, '-o', output_path, '-m', models_dir, '-n', model_name, '-s', '4', '-f', 'png'] + gpu_flags
                     if enable_tta: cmd.append('-x')

@@ -447,22 +447,55 @@ async fn handle_upscale(
                 }
             }
         } else if scale == "2" {
-            let mut cmd = Command::new(&stream_state.engine_path);
-            cmd.args([
-                "-i", input_path.to_str().unwrap(),
-                "-o", output_path.to_str().unwrap(),
-                "-m", &models_dir_str,
-                "-n", &model_name,
-                "-s", "2",
-                "-f", "png",
-            ]);
-            cmd.args(&gpu_args);
-            if enable_tta { cmd.arg("-x"); }
+            if model_name == "realesr-animevideov3" {
+                let mut cmd = Command::new(&stream_state.engine_path);
+                cmd.args([
+                    "-i", input_path.to_str().unwrap(),
+                    "-o", output_path.to_str().unwrap(),
+                    "-m", &models_dir_str,
+                    "-n", &model_name,
+                    "-s", "2",
+                    "-f", "png",
+                ]);
+                cmd.args(&gpu_args);
+                if enable_tta { cmd.arg("-x"); }
 
-            let (res, events) = run_cmd(cmd, "2X HD Super-Resolution", 0.0, 100.0).await;
-            for ev in events { yield Ok(Event::default().data(ev)); }
-            if res.unwrap_or(false) && output_path.exists() {
-                success = true;
+                let (res, events) = run_cmd(cmd, "2X HD Super-Resolution", 0.0, 100.0).await;
+                for ev in events { yield Ok(Event::default().data(ev)); }
+                if res.unwrap_or(false) && output_path.exists() {
+                    success = true;
+                }
+            } else {
+                let pass2x_file = stream_state.outputs_dir.join(format!("temp_2x_{}.png", job_id));
+                let mut cmd = Command::new(&stream_state.engine_path);
+                cmd.args([
+                    "-i", input_path.to_str().unwrap(),
+                    "-o", pass2x_file.to_str().unwrap(),
+                    "-m", &models_dir_str,
+                    "-n", &model_name,
+                    "-s", "4",
+                    "-f", "png",
+                ]);
+                cmd.args(&gpu_args);
+                if enable_tta { cmd.arg("-x"); }
+
+                let (res, events) = run_cmd(cmd, "2X HD Neural Reconstruction", 0.0, 95.0).await;
+                for ev in events { yield Ok(Event::default().data(ev)); }
+
+                if res.unwrap_or(false) && pass2x_file.exists() {
+                    if let Ok(bytes) = tokio::fs::read(&pass2x_file).await {
+                        if let Ok(img) = image::load_from_memory(&bytes) {
+                            let (w, h) = img.dimensions();
+                            let target_w = if orig_w > 0 { orig_w * 2 } else { w / 2 };
+                            let target_h = if orig_h > 0 { orig_h * 2 } else { h / 2 };
+                            let resized = image::imageops::resize(&img, target_w, target_h, image::imageops::FilterType::Lanczos3);
+                            if resized.save(&output_path).is_ok() {
+                                success = true;
+                            }
+                        }
+                    }
+                    tokio::fs::remove_file(&pass2x_file).await.ok();
+                }
             }
         } else {
             let mut cmd = Command::new(&stream_state.engine_path);

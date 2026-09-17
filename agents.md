@@ -114,6 +114,16 @@
 - **Architectural Gotchas / Invariants**:
   - Always maintain `.gitkeep` inside `uploads/` and `outputs/` so that fresh clones contain the required folders.
 
+## 2X Scale Tile Distortion Fix (Lanczos Downscaling for 4X Models)
+- **Problem & Root Cause**:
+  - In `realesrgan-ncnn-vulkan`, passing `-s 2` with natively 4X-trained models (`realesrgan-x4plus`, `4x_NMKD-Superscale`, etc.) caused internal NCNN tile stitching mismatches, producing visible checkerboard / shifted grid artifact lines across the output image.
+- **Solution & Modified Files**:
+  - `server.py`: When `scale == '2'`, models with native 2X weights (`realesr-animevideov3`) continue running `-s 2`. For all 4X models, the backend runs a seamless 4X neural pass followed by high-quality Lanczos downsampling to exact `2X` dimensions (`orig_w * 2, orig_h * 2`).
+  - `backend/src/main.rs`: Implemented the identical 4X neural pass + Lanczos downsampling pipeline using the `image::imageops` crate in Rust.
+- **Architectural Gotchas / Invariants**:
+  - Never pass `-s 2` directly to 4X NCNN models through the CLI binary; always run the native 4X neural pass and downscale 50% via Lanczos filter for seamless tile blending.
+
+
 
 
 
