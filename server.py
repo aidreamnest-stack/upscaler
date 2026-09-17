@@ -269,12 +269,6 @@ class UpscaleHandler(SimpleHTTPRequestHandler):
                 # Close connection gracefully so browser never freezes
                 self.close_connection = True
 
-                try:
-                    if os.path.exists(input_path):
-                        os.remove(input_path)
-                except Exception as cleanup_err:
-                    print("Cleanup error:", cleanup_err)
-
             except Exception as e:
                 try:
                     err_msg = 'data: ' + json.dumps({'type': 'error', 'message': str(e)}) + '\n\n'
@@ -282,6 +276,12 @@ class UpscaleHandler(SimpleHTTPRequestHandler):
                 except:
                     pass
                 self.close_connection = True
+            finally:
+                try:
+                    if os.path.exists(input_path):
+                        os.remove(input_path)
+                except Exception as cleanup_err:
+                    print("Cleanup error:", cleanup_err)
         else:
             self.send_error(404, 'Endpoint not found')
 

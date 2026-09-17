@@ -14,12 +14,20 @@
 
 ## Upload Cleanup & Frontend Object URL
 - **Problem & Root Cause**:
-  - The `uploads` directory was accumulating original uploaded images without cleanup. Deleting the file immediately in the backend would break the frontend comparison slider which relied on fetching `/uploads/{filename}` after the upscale finished.
+  - The `uploads` directory was accumulating original uploaded images without cleanup. Deleting the file immediately in the backend would break the frontend comparison slider which relied on fetching `/uploads/{filename}` after the upscale finished. Also, early returns or exceptions during processing would bypass the cleanup logic completely, leaving files behind.
 - **Solution & Modified Files**:
   - `index.html`: Refactored the `origImg` logic inside `handleSSEData` to use `URL.createObjectURL(selectedFile)` directly on the client instead of making a network request for the original image.
-  - `server.py`: Added cleanup logic at the end of the `/api/upscale` request to `os.remove(input_path)` immediately after processing is complete.
+  - `server.py`: Added cleanup logic in a `finally:` block at the end of the `/api/upscale` request to `os.remove(input_path)` immediately after processing is complete or if an error occurs.
 - **Architectural Gotchas / Invariants**:
   - The frontend MUST always use the local `File` object data for rendering the "Before" state. The backend does not persist original uploads after processing completes.
+
+## Desktop Shortcut Installer
+- **Problem & Root Cause**: 
+  - Users checking out the repository needed an easy, automated way to create a desktop shortcut to start the tool, rather than manually finding and executing `start.bat`.
+- **Solution & Modified Files**: 
+  - `Install_App.bat`: Created a new batch script that utilizes PowerShell to programmatically generate an `Image Upscaler.lnk` desktop shortcut pointing directly to the application's `start.bat`.
+- **Architectural Gotchas / Invariants**:
+  - Do not assume fixed absolute paths for the shortcut target. Always dynamically resolve `%~dp0` to ensure the shortcut works regardless of where the repository is cloned on the user's machine.
 
 ## Upload Image Preview
 - **Problem & Root Cause**: 
