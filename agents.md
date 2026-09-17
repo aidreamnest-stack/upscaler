@@ -105,6 +105,16 @@
 - **Architectural Gotchas / Invariants**:
   - Always preserve the original image filename stem and only append the resolution tag (e.g., `landscape_photo.jpg` -> `landscape_photo_4k.jpg`).
 
+## Git Ignore Configuration for Temporary Folders
+- **Problem & Root Cause**:
+  - Image files stored in `uploads/` and `outputs/` during local development were appearing as untracked files in Git.
+- **Solution & Modified Files**:
+  - `.gitignore`: Configured rules to ignore all files within `uploads/*` and `outputs/*` while keeping empty folder structures tracked via `.gitkeep`.
+  - Also added standard patterns for `target/`, `__pycache__/`, `.env`, and OS metadata files.
+- **Architectural Gotchas / Invariants**:
+  - Always maintain `.gitkeep` inside `uploads/` and `outputs/` so that fresh clones contain the required folders.
+
+
 
 
 
