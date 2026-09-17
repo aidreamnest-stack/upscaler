@@ -273,7 +273,7 @@ async fn handle_upscale(
     mut multipart: Multipart,
 ) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, StatusCode> {
     let mut image_bytes: Option<Vec<u8>> = None;
-    let mut model_name = "4x_NMKD-Superscale-SP_178000_G".to_string();
+    let mut model_name = "realesrgan-x4plus".to_string();
     let mut scale = "4".to_string();
     let mut gpu = "auto".to_string();
     let mut enable_tta = false;
