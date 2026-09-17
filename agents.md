@@ -131,6 +131,15 @@
 - **Architectural Gotchas / Invariants**:
   - Always run `cd /d "%~dp0"` prior to executing Git commands to ensure path resolution remains correct when launched via desktop shortcut.
 
+## Senior-Dev Documentation & Local Isolation
+- **Problem & Root Cause**:
+  - The project documentation needed to be decoupled from cloud/Dokploy references since the backend API is moving to a separate repository, and provide concise, engineering-focused instructions for Windows local users.
+- **Solution & Modified Files**:
+  - `README.md` (root & local): Created a comprehensive, technical architecture guide, model catalog, and troubleshooting section with author branding (**JPX**), strictly scoped to the local environment.
+- **Architectural Gotchas / Invariants**:
+  - Keep local `README.md` free of Dokploy/containerized backend configs.
+
+
 
 
 
