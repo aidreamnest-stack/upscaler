@@ -139,6 +139,16 @@
 - **Architectural Gotchas / Invariants**:
   - Keep local `README.md` free of Dokploy/containerized backend configs.
 
+## Open-Source Community & Licensing Configuration
+- **Problem & Root Cause**:
+  - Repository needed standard open-source governance files (MIT License and Contributing Guidelines) specifying the branching strategy and PR workflows targeting development branches instead of protected `main`.
+- **Solution & Modified Files**:
+  - `LICENSE`: Standard MIT License attributed to JPX (2026).
+  - `CONTRIBUTING.md`: Complete contributor workflow documentation detailing fork procedure, branch rules, code standards, and PR submission targets.
+- **Architectural Gotchas / Invariants**:
+  - All contributor PRs must target the development branch (`Dev-ache-😂`), leaving `main` protected.
+
+
 
 
 
