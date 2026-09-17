@@ -1,3 +1,14 @@
+"""
+AI Upscale Lab — Local Streaming & Super-Resolution Server
+Maintained by: JPX
+
+Architecture:
+- Native HTTP & SSE progress streamer (stdout -> EventSource).
+- Subprocess manager for Vulkan NCNN inference (realesrgan-ncnn-vulkan).
+- Automatic Lanczos post-downsampling for seamless 2X multi-scale blending.
+- Dual storage cleanup policy: instant deletion on download + 10-min background TTL reaper.
+"""
+
 import os
 import sys
 import time
