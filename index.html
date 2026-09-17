@@ -468,15 +468,12 @@
 
   <script>
     let selectedFile = null;
-    let selectedImgWidth = 0;
-    let selectedImgHeight = 0;
     let currentUpscaledUrl = null;
     let activeReader = null;
     let stopwatchInterval = null;
     let startTimeMs = 0;
     let currentMode = 'split';
     let latestServerPct = 0;
-    let estimatedTotalTimeSec = 3.0; // Baseline dynamic estimate
 
     const fileInput = document.getElementById('fileInput');
     const dropzone = document.getElementById('dropzone');
@@ -553,29 +550,7 @@
       stageFileBadge.innerText = file.name + ' · Ready';
       upscaleBtn.disabled = false;
 
-      // Extract image dimensions for precise ETA benchmark
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const testImg = new Image();
-        testImg.onload = () => {
-          selectedImgWidth = testImg.width;
-          selectedImgHeight = testImg.height;
-          // RTX 3050 Benchmark calculation: (Megapixels * ScaleFactor)
-          const mp = (testImg.width * testImg.height) / 1000000;
-          const scale = parseInt(scaleSelect.value || '4');
-          if (scale === 8) {
-            estimatedTotalTimeSec = Math.max(3.5, mp * 8.0 + 2.0);
-          } else if (scale === 2) {
-            estimatedTotalTimeSec = Math.max(1.2, mp * 1.5 + 0.8);
-          } else {
-            estimatedTotalTimeSec = Math.max(1.8, mp * 3.5 + 1.0);
-          }
-        };
-        testImg.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-
-      // Show Preview
+      // Show local image preview
       placeholderState.style.display = 'none';
       comparisonStage.style.display = 'none';
       sideBySideStage.style.display = 'none';

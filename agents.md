@@ -148,6 +148,15 @@
 - **Architectural Gotchas / Invariants**:
   - All contributor PRs must target the development branch (`Dev-ache-😂`), leaving `main` protected.
 
+## Senior-Dev Code Hygiene & Dead Code Cleanup
+- **Problem & Root Cause**:
+  - `index.html` contained obsolete benchmark variables (`estimatedTotalTimeSec`, `selectedImgWidth`, `selectedImgHeight`) and a redundant `FileReader` instance left over from an old simulated ETA calculation.
+- **Solution & Modified Files**:
+  - `index.html`: Purged unused legacy variables and streamlined `handleFileSelect` to immediately render the object URL preview without unnecessary asynchronous file decoding overhead.
+- **Architectural Gotchas / Invariants**:
+  - Client state relies exclusively on the Server-Sent Events stream for progress; keep client file handlers synchronous and lightweight.
+
+
 
 
 
