@@ -53,6 +53,26 @@
 - **Problem & Root Cause**: 
   - The UI contained excessively verbose, AI-generated technical jargon (e.g., "Neural Super-Resolution Studio", "Enterprise Engine") and an unnecessary features banner, making it look generic and cluttered.
 - **Solution & Modified Files**: 
-  - `index.html`: Replaced exaggerated wording with standard, user-friendly labels (e.g., "Image Upscaler", "Model", "GPU Device"). Removed the `features-grid` section entirely for a cleaner layout.
+  - `index.html`: Replaced placeholder jargon with clean, concise labels. Removed unnecessary feature banners.
 - **Architectural Gotchas / Invariants**:
-  - Keep UI copy concise and functionally descriptive. Avoid adding unnecessary feature showcase banners for single-purpose local tools.
+  - Keep UI copy concise and functionally descriptive.
+
+## High-Quality NCNN Community Models Integration
+- **Problem & Root Cause**:
+  - The default Real-ESRGAN models lacked fine-grained photographic realism and texture synthesis (such as Midjourney-like clarity), and large diffusion upscalers like SUPIR are too heavy for 4GB VRAM.
+- **Solution & Modified Files**:
+  - `models/`: Downloaded top-tier NCNN-converted community weights (`4x_NMKD-Superscale-SP_178000_G`, `4xLSDIR`, `4xNomos8kSC`, `4x_NMKD-Siax_200k`, `RealESRGAN_General_x4_v3`).
+  - `server.py`: Updated backend subprocess execution to explicitly pass `-m models` and use the user's selected model across 2X, 4X, and 8X upscale paths.
+  - `index.html`: Enhanced the `#modelSelect` dropdown with categorized optgroups (`Photorealistic & High Detail` vs `Digital Art, Anime & 3D`) and user-friendly labels.
+- **Architectural Gotchas / Invariants**:
+  - NCNN models (.bin and .param) run natively through `realesrgan-ncnn-vulkan.exe` with zero extra Python runtime overhead or VRAM footprint issues on 4GB GPUs. Always pass explicit `-m models` path to avoid path resolution differences.
+
+## Remaining Time Display Removal
+- **Problem & Root Cause**:
+  - The dynamic estimated remaining time (`etaVal`) added visual clutter and was prone to fluctuation on variable-length GPU workloads.
+- **Solution & Modified Files**:
+  - `index.html`: Removed the "Remaining" stat from `.stats-ticking-row` and eliminated all associated ETA calculation logic in JavaScript. The progress bar now cleanly focuses only on **Elapsed time (⏱️)** and **real-time Progress percentage (⚡)**.
+- **Architectural Gotchas / Invariants**:
+  - Keep the progress overlay minimal: show elapsed seconds and actual server-reported percent without speculative ETA numbers.
+
+

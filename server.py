@@ -209,9 +209,11 @@ class UpscaleHandler(SimpleHTTPRequestHandler):
 
                 gpu_flags = build_gpu_args()
 
+                models_dir = os.path.join(LAB_DIR, 'models')
+
                 if scale == '8':
                     pass1_output = os.path.join(OUTPUTS_DIR, f'temp_pass1_{timestamp}.png')
-                    cmd1 = [EXE_PATH, '-i', input_path, '-o', pass1_output, '-n', model_name, '-s', '4', '-f', 'png'] + gpu_flags
+                    cmd1 = [EXE_PATH, '-i', input_path, '-o', pass1_output, '-m', models_dir, '-n', model_name, '-s', '4', '-f', 'png'] + gpu_flags
                     if enable_tta: cmd1.append('-x')
 
                     ret1 = run_process_with_progress(cmd1, 'Pass 1/2: 4X Base Neural Reconstruction', 0, 50)
@@ -219,7 +221,7 @@ class UpscaleHandler(SimpleHTTPRequestHandler):
                         send_event({'type': 'error', 'message': '8X Pass 1 failed'})
                         return
 
-                    cmd2 = [EXE_PATH, '-i', pass1_output, '-o', output_path, '-n', 'realesr-animevideov3', '-s', '2', '-f', 'png'] + gpu_flags
+                    cmd2 = [EXE_PATH, '-i', pass1_output, '-o', output_path, '-m', models_dir, '-n', 'realesr-animevideov3', '-s', '2', '-f', 'png'] + gpu_flags
                     if enable_tta: cmd2.append('-x')
 
                     ret2 = run_process_with_progress(cmd2, 'Pass 2/2: 8X Sub-Pixel Synthesis', 50, 50)
@@ -232,14 +234,14 @@ class UpscaleHandler(SimpleHTTPRequestHandler):
                         send_event({'type': 'error', 'message': '8X Pass 2 failed'})
                         return
                 elif scale == '2':
-                    cmd = [EXE_PATH, '-i', input_path, '-o', output_path, '-n', 'realesr-animevideov3', '-s', '2', '-f', 'png'] + gpu_flags
+                    cmd = [EXE_PATH, '-i', input_path, '-o', output_path, '-m', models_dir, '-n', model_name, '-s', '2', '-f', 'png'] + gpu_flags
                     if enable_tta: cmd.append('-x')
                     ret = run_process_with_progress(cmd, '2X HD Super-Resolution', 0, 100)
                     if ret != 0 or not os.path.exists(output_path):
                         send_event({'type': 'error', 'message': '2X upscale failed'})
                         return
                 else:
-                    cmd = [EXE_PATH, '-i', input_path, '-o', output_path, '-n', model_name, '-s', '4', '-f', 'png'] + gpu_flags
+                    cmd = [EXE_PATH, '-i', input_path, '-o', output_path, '-m', models_dir, '-n', model_name, '-s', '4', '-f', 'png'] + gpu_flags
                     if enable_tta: cmd.append('-x')
                     ret = run_process_with_progress(cmd, '4X UHD Super-Resolution', 0, 100)
                     if ret != 0 or not os.path.exists(output_path):

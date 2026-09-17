@@ -281,12 +281,22 @@
         <!-- Model Selector -->
         <div class="form-group">
           <div class="form-label">
-            <span>Model</span>
+            <span>AI Neural Model</span>
+            <span style="font-size: 0.7rem; color: var(--accent);">NCNN Vulkan</span>
           </div>
           <select class="form-select" id="modelSelect">
-            <option value="realesrgan-x4plus">realesrgan-x4plus</option>
-            <option value="realesrgan-x4plus-anime">realesrgan-x4plus-anime</option>
-            <option value="realesr-animevideov3">realesr-animevideov3</option>
+            <optgroup label="🌟 Photorealistic & High Detail (Recommended)">
+              <option value="4x_NMKD-Superscale-SP_178000_G" selected>NMKD Superscale (Midjourney-Style Photo Detail)</option>
+              <option value="4xLSDIR">LSDIR (Large-Scale Crisp & Natural Photos)</option>
+              <option value="4xNomos8kSC">Nomos 8K (Cinematic Landscapes & Textures)</option>
+              <option value="RealESRGAN_General_x4_v3">RealESRGAN General v3 (Fast & Clean)</option>
+              <option value="realesrgan-x4plus">RealESRGAN x4 Plus (Standard Classic)</option>
+            </optgroup>
+            <optgroup label="🎨 Digital Art, Anime & 3D">
+              <option value="4x_NMKD-Siax_200k">NMKD Siax (Digital Art / 3D Renders / CGI)</option>
+              <option value="realesrgan-x4plus-anime">RealESRGAN Anime Plus (2D Illustration & Cartoons)</option>
+              <option value="realesr-animevideov3">RealESR AnimeVideo v3 (Ultra Fast / Smooth)</option>
+            </optgroup>
           </select>
         </div>
 
@@ -384,11 +394,10 @@
               <div class="progress-bar-fill" id="progressFill"></div>
             </div>
 
-            <!-- REAL HIGH-PRECISION TICKING STOPWATCH & DYNAMIC ESTIMATE -->
+            <!-- REAL HIGH-PRECISION TICKING STOPWATCH -->
             <div class="stats-ticking-row">
               <span>⏱️ Elapsed: <span class="stat-val" id="elapsedVal">0.0s</span></span>
               <span>⚡ Progress: <span class="stat-accent" id="pctVal">0.0%</span></span>
-              <span>⏳ Remaining: <span class="stat-val" id="etaVal">~2.5s</span></span>
             </div>
           </div>
 
@@ -572,11 +581,9 @@
       imgPreview.src = URL.createObjectURL(file);
     }
 
-    // REAL CONTINUOUS 100ms STOPWATCH & INTERPOLATED PROGRESS / ETA
-    let lastProgressTimeMs = 0;
+    // REAL CONTINUOUS 100ms STOPWATCH & REAL-TIME PROGRESS
     function startRealTimeStopwatch() {
       startTimeMs = performance.now();
-      lastProgressTimeMs = startTimeMs;
       latestServerPct = 0;
       
       if (stopwatchInterval) clearInterval(stopwatchInterval);
@@ -584,35 +591,12 @@
       stopwatchInterval = setInterval(() => {
         const now = performance.now();
         const elapsedSec = (now - startTimeMs) / 1000;
-        const timeSinceLastProgress = now - lastProgressTimeMs;
         
         elapsedVal.innerText = elapsedSec.toFixed(1) + 's';
 
         // Use real progress from server
         progressFill.style.width = latestServerPct.toFixed(1) + '%';
         pctVal.innerText = latestServerPct.toFixed(1) + '%';
-
-        // Check if stuck at 99% saving image
-        if (latestServerPct >= 95 && timeSinceLastProgress > 2000) {
-          etaVal.innerText = 'Finalizing...';
-        } 
-        // If no progress received yet, show analyzing
-        else if (latestServerPct === 0) {
-          etaVal.innerText = 'Analyzing...';
-        }
-        else {
-          // Calculate true remaining time based on actual speed
-          const actualTotalSec = elapsedSec / (latestServerPct / 100);
-          const remainingSec = Math.max(0.1, actualTotalSec - elapsedSec);
-
-          if (remainingSec > 60) {
-            const m = Math.floor(remainingSec / 60);
-            const s = Math.round(remainingSec % 60);
-            etaVal.innerText = '~' + m + 'm ' + s + 's';
-          } else {
-            etaVal.innerText = '~' + remainingSec.toFixed(1) + 's';
-          }
-        }
       }, 100);
     }
 
@@ -637,7 +621,6 @@
       progressFill.style.width = '0%';
       pctVal.innerText = '0.0%';
       elapsedVal.innerText = '0.0s';
-      etaVal.innerText = '~' + estimatedTotalTimeSec.toFixed(1) + 's';
       stageStatusText.innerText = 'Initializing...';
 
       startRealTimeStopwatch();
@@ -707,7 +690,6 @@
         progressFill.style.width = '100%';
         pctVal.innerText = '100%';
         elapsedVal.innerText = data.time_sec + 's';
-        etaVal.innerText = '0.0s (Done)';
 
         currentUpscaledUrl = data.upscaled_url;
 
