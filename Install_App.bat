@@ -11,14 +11,12 @@ echo.
 
 set "SCRIPT_DIR=%~dp0"
 set "TARGET_BAT=%SCRIPT_DIR%start.bat"
-set "SHORTCUT_PATH=%USERPROFILE%\Desktop\Image Upscaler.lnk"
 set "ICON_PATH=%SCRIPT_DIR%icon.ico"
 
-:: Use PowerShell to create the Windows shortcut (.lnk file)
-:: The icon is set to the custom icon.ico in the repository
-powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%SHORTCUT_PATH%'); $Shortcut.TargetPath = '%TARGET_BAT%'; $Shortcut.WorkingDirectory = '%SCRIPT_DIR%'; $Shortcut.IconLocation = '%ICON_PATH%'; $Shortcut.Description = 'Launch Image Upscaler AI Tool'; $Shortcut.Save()"
+:: Use PowerShell to dynamically get the real Desktop path (handles OneDrive) and create the shortcut
+powershell -NoProfile -Command "$DesktopPath = [Environment]::GetFolderPath('Desktop'); $ShortcutPath = Join-Path $DesktopPath 'Image Upscaler.lnk'; $WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut($ShortcutPath); $Shortcut.TargetPath = '%TARGET_BAT%'; $Shortcut.WorkingDirectory = '%SCRIPT_DIR%'; $Shortcut.IconLocation = '%ICON_PATH%'; $Shortcut.Description = 'Launch Image Upscaler AI Tool'; $Shortcut.Save(); if (Test-Path $ShortcutPath) { exit 0 } else { exit 1 }"
 
-if exist "%SHORTCUT_PATH%" (
+if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Shortcut created successfully on your Desktop!
     echo.
     echo You can now close this window and double-click the "Image Upscaler" 

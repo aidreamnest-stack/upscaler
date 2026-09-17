@@ -36,6 +36,7 @@ class UpscaleHandler(SimpleHTTPRequestHandler):
         if clean_path.startswith('outputs/') or clean_path.startswith('uploads/'):
             file_path = os.path.join(LAB_DIR, clean_path)
             if os.path.exists(file_path):
+                is_download = 'download=1' in self.path
                 self.send_response(200)
                 if file_path.endswith('.png'):
                     self.send_header('Content-Type', 'image/png')
@@ -49,7 +50,7 @@ class UpscaleHandler(SimpleHTTPRequestHandler):
                 size = os.path.getsize(file_path)
                 self.send_header('Content-Length', str(size))
                 self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
-                if 'download=1' in self.path:
+                if is_download:
                     filename = os.path.basename(file_path)
                     self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
                 self.end_headers()
@@ -57,6 +58,13 @@ class UpscaleHandler(SimpleHTTPRequestHandler):
                 with open(file_path, 'rb') as f:
                     while chunk := f.read(65536):
                         self.wfile.write(chunk)
+                
+                # Auto-delete output file after download to keep outputs/ folder clean
+                if is_download and clean_path.startswith('outputs/'):
+                    try:
+                        os.remove(file_path)
+                    except Exception as del_err:
+                        print(f"Output cleanup error: {del_err}")
                 return
 
         SimpleHTTPRequestHandler.do_GET(self)

@@ -573,42 +573,45 @@
     }
 
     // REAL CONTINUOUS 100ms STOPWATCH & INTERPOLATED PROGRESS / ETA
+    let lastProgressTimeMs = 0;
     function startRealTimeStopwatch() {
       startTimeMs = performance.now();
+      lastProgressTimeMs = startTimeMs;
       latestServerPct = 0;
       
       if (stopwatchInterval) clearInterval(stopwatchInterval);
       
       stopwatchInterval = setInterval(() => {
-        const elapsedSec = (performance.now() - startTimeMs) / 1000;
+        const now = performance.now();
+        const elapsedSec = (now - startTimeMs) / 1000;
+        const timeSinceLastProgress = now - lastProgressTimeMs;
+        
         elapsedVal.innerText = elapsedSec.toFixed(1) + 's';
 
-        // Continuous progress interpolation so progress bar never stays frozen
-        let currentDisplayPct = latestServerPct;
-        if (latestServerPct < 95) {
-          // Time-based smooth continuous progress estimation
-          const timePct = Math.min(92, (elapsedSec / estimatedTotalTimeSec) * 100);
-          currentDisplayPct = Math.max(latestServerPct, timePct);
-        }
-        
-        progressFill.style.width = currentDisplayPct.toFixed(1) + '%';
-        pctVal.innerText = currentDisplayPct.toFixed(1) + '%';
+        // Use real progress from server
+        progressFill.style.width = latestServerPct.toFixed(1) + '%';
+        pctVal.innerText = latestServerPct.toFixed(1) + '%';
 
-        // REAL DYNAMIC REMAINING SECONDS
-        let remainingSec = 0;
-        if (latestServerPct > 10 && latestServerPct < 98) {
+        // Check if stuck at 99% saving image
+        if (latestServerPct >= 95 && timeSinceLastProgress > 2000) {
+          etaVal.innerText = 'Finalizing...';
+        } 
+        // If no progress received yet, show analyzing
+        else if (latestServerPct === 0) {
+          etaVal.innerText = 'Analyzing...';
+        }
+        else {
+          // Calculate true remaining time based on actual speed
           const actualTotalSec = elapsedSec / (latestServerPct / 100);
-          remainingSec = Math.max(0.1, actualTotalSec - elapsedSec);
-        } else {
-          remainingSec = Math.max(0.2, estimatedTotalTimeSec - elapsedSec);
-        }
+          const remainingSec = Math.max(0.1, actualTotalSec - elapsedSec);
 
-        if (remainingSec > 60) {
-          const m = Math.floor(remainingSec / 60);
-          const s = Math.round(remainingSec % 60);
-          etaVal.innerText = '~' + m + 'm ' + s + 's';
-        } else {
-          etaVal.innerText = '~' + remainingSec.toFixed(1) + 's';
+          if (remainingSec > 60) {
+            const m = Math.floor(remainingSec / 60);
+            const s = Math.round(remainingSec % 60);
+            etaVal.innerText = '~' + m + 'm ' + s + 's';
+          } else {
+            etaVal.innerText = '~' + remainingSec.toFixed(1) + 's';
+          }
         }
       }, 100);
     }
