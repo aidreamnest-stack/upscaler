@@ -123,6 +123,15 @@
 - **Architectural Gotchas / Invariants**:
   - Never pass `-s 2` directly to 4X NCNN models through the CLI binary; always run the native 4X neural pass and downscale 50% via Lanczos filter for seamless tile blending.
 
+## Silent Startup Auto-Updater
+- **Problem & Root Cause**:
+  - Users who cloned the repository had to manually execute `git pull` in a terminal whenever upstream updates or bug fixes were pushed.
+- **Solution & Modified Files**:
+  - `start.bat`: Added a silent pre-flight `git pull --quiet` check during launch. If a valid Git work tree is detected, it automatically fetches and pulls the latest code before launching `server.py`, with graceful fallback if offline.
+- **Architectural Gotchas / Invariants**:
+  - Always run `cd /d "%~dp0"` prior to executing Git commands to ensure path resolution remains correct when launched via desktop shortcut.
+
+
 
 
 

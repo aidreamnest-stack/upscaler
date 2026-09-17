@@ -495,7 +495,6 @@
     const stageStatusText = document.getElementById('stageStatusText');
     const elapsedVal = document.getElementById('elapsedVal');
     const pctVal = document.getElementById('pctVal');
-    const etaVal = document.getElementById('etaVal');
 
     const imgBefore = document.getElementById('imgBefore');
     const imgAfter = document.getElementById('imgAfter');
@@ -638,12 +637,12 @@
           body: formData
         });
 
-        const reader = response.body.getReader();
+        activeReader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
 
         while (true) {
-          const { value, done } = await reader.read();
+          const { value, done } = await activeReader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
@@ -717,9 +716,9 @@
           }
           resultStrip.style.display = 'flex';
 
-          const scaleVal = data.scale || scaleSelect.value;
-          document.getElementById('badgeAfter').innerText = scaleVal + 'X Upscaled';
-          document.getElementById('badgeAfterSide').innerText = scaleVal + 'X Upscaled';
+          const scaleRaw = (data.scale || scaleSelect.value || '4').toString().replace(/X/gi, '');
+          document.getElementById('badgeAfter').innerText = scaleRaw + 'X Upscaled';
+          document.getElementById('badgeAfterSide').innerText = scaleRaw + 'X Upscaled';
           document.getElementById('timeVal').innerText = data.time_sec + 's';
           
           if (data.orig_dims && data.out_dims) {
