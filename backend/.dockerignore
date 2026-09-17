@@ -1,6 +1,0 @@
-target/
-uploads/*
-outputs/*
-.env
-.git
-.gitignore
