@@ -740,11 +740,32 @@
 
     function triggerDownload() {
       if (!currentUpscaledUrl) return;
-      const downloadUrl = currentUpscaledUrl + '?download=1';
+
+      let baseName = 'image';
+      let ext = 'png';
+      if (selectedFile && selectedFile.name) {
+        const lastDot = selectedFile.name.lastIndexOf('.');
+        if (lastDot > 0) {
+          baseName = selectedFile.name.substring(0, lastDot);
+          ext = selectedFile.name.substring(lastDot + 1);
+        } else {
+          baseName = selectedFile.name;
+        }
+      }
+
+      let scaleTag = '4k';
+      const scaleVal = scaleSelect.value;
+      if (scaleVal === '2') scaleTag = '2k';
+      else if (scaleVal === '8') scaleTag = '8k';
+      else scaleTag = '4k';
+
+      const finalFileName = `${baseName}_${scaleTag}.${ext}`;
+      const downloadUrl = currentUpscaledUrl + '?download=1&name=' + encodeURIComponent(finalFileName);
+
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = downloadUrl;
-      a.download = 'upscaled_master_' + Date.now() + '.png';
+      a.download = finalFileName;
       document.body.appendChild(a);
       a.click();
       setTimeout(() => document.body.removeChild(a), 100);

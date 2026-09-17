@@ -1,0 +1,28 @@
+# Ignored Uploads & Outputs (Keep empty folder structure via .gitkeep)
+uploads/*
+!uploads/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+# Python cache & temp
+__pycache__/
+*.py[cod]
+*$py.class
+*.tmp
+*.log
+
+# Rust / Backend build artifacts
+target/
+backend/target/
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/outputs/*
+!backend/outputs/.gitkeep
+
+# Environment files
+.env
+.env.local
+
+# OS generated files
+.DS_Store
+Thumbs.db

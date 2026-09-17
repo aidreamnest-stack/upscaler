@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  ai-upscale-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-upscale-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - RUST_LOG=info
+      - MAX_CONCURRENT_JOBS=2
+    volumes:
+      - outputs_data:/app/outputs
+      - uploads_data:/app/uploads
+    # Uncomment if your Dokploy VPS has NVIDIA GPU configured:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  outputs_data:
+  uploads_data:

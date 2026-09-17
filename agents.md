@@ -75,4 +75,37 @@
 - **Architectural Gotchas / Invariants**:
   - Keep the progress overlay minimal: show elapsed seconds and actual server-reported percent without speculative ETA numbers.
 
+## Dokploy-Ready Rust Production Backend
+- **Problem & Root Cause**:
+  - Deploying a Python script with system dependencies onto Dokploy/VPS created overhead, high memory footprint, and lacked standard containerized API structure for custom domain routing (`api.domain.com`).
+- **Solution & Modified Files**:
+  - `backend/Cargo.toml`, `backend/src/main.rs`: Implemented a standalone, ultra-low-memory (~10MB) Rust Axum backend with streaming SSE endpoints (`/api/upscale`), model introspection (`/api/models`), and health checks (`/health`).
+  - `backend/models/`: Packaged all 8 top-tier NCNN models directly into the backend directory.
+  - `backend/Dockerfile`: Created a multi-stage Docker build that bundles the official Linux 64-bit NCNN Vulkan binary and Mesa/Vulkan drivers.
+  - `backend/docker-compose.yml`, `backend/README_DOKPLOY.md`: Configured one-click Dokploy deployment guide for domain mapping and SSL termination.
+- **Architectural Gotchas / Invariants**:
+  - The Linux NCNN Vulkan binary inside Docker works seamlessly on both standard CPU VPS (software Vulkan fallback) and GPU VPS instances (via nvidia-container-toolkit). Always bind `0.0.0.0:3000` for Docker container communication.
+
+## Hybrid Output & Upload Auto-Cleanup (Instant + 10-Min TTL)
+- **Problem & Root Cause**:
+  - If a user generated an upscale but closed their browser tab without clicking "Download", the generated image remained on disk indefinitely, slowly consuming server storage.
+- **Solution & Modified Files**:
+  - `server.py`: Added a background daemon thread that scans `outputs/` and `uploads/` every 60s and deletes any file with an `mtime` older than 10 minutes (600 seconds). Instant deletion on download (`?download=1`) remains active.
+  - `backend/src/main.rs`: Spawned an asynchronous `tokio` background task implementing the same 10-minute TTL cleanup logic across `outputs/` and `uploads/`.
+- **Architectural Gotchas / Invariants**:
+  - Keep TTL at 10 minutes (600s). This provides ample time for users to compare Before/After and download, while guaranteeing zero disk accumulation for abandoned sessions.
+
+## Original Filename Preservation with Resolution Suffix
+- **Problem & Root Cause**:
+  - The download action was assigning a generic randomized timestamp name (`upscaled_master_<timestamp>.png`), discarding the original upload filename.
+- **Solution & Modified Files**:
+  - `index.html`: Updated `triggerDownload()` to extract the original base filename from `selectedFile.name` and append the appropriate scale suffix (`_2k`, `_4k`, or `_8k`) alongside the original file extension.
+  - `server.py`: Enhanced `do_GET` handler to read `?name=` query parameter from download requests and pass it directly into the `Content-Disposition: attachment; filename="..."` HTTP header.
+  - `backend/src/main.rs`: Added optional `name` parameter support to `DownloadQuery` and injected the custom filename into the `Content-Disposition` header in the Rust API.
+- **Architectural Gotchas / Invariants**:
+  - Always preserve the original image filename stem and only append the resolution tag (e.g., `landscape_photo.jpg` -> `landscape_photo_4k.jpg`).
+
+
+
+
 

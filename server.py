@@ -4,8 +4,9 @@ import time
 import subprocess
 import json
 import re
+import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from PIL import Image
 
 PORT = 8080
@@ -13,9 +14,34 @@ LAB_DIR = os.path.dirname(os.path.abspath(__file__))
 EXE_PATH = os.path.join(LAB_DIR, 'realesrgan-ncnn-vulkan.exe')
 UPLOADS_DIR = os.path.join(LAB_DIR, 'uploads')
 OUTPUTS_DIR = os.path.join(LAB_DIR, 'outputs')
+FILE_TTL_SECONDS = 600  # 10 minutes
 
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
+
+def cleanup_stale_files_loop():
+    """Background daemon reaper that removes files older than 10 minutes from uploads and outputs."""
+    while True:
+        try:
+            now = time.time()
+            for target_dir in [OUTPUTS_DIR, UPLOADS_DIR]:
+                if os.path.exists(target_dir):
+                    for fname in os.listdir(target_dir):
+                        fpath = os.path.join(target_dir, fname)
+                        if os.path.isfile(fpath):
+                            file_age = now - os.path.getmtime(fpath)
+                            if file_age > FILE_TTL_SECONDS:
+                                try:
+                                    os.remove(fpath)
+                                    print(f"[Auto-Cleanup] Pruned expired temporary file: {fname} (age: {int(file_age)}s)")
+                                except Exception:
+                                    pass
+        except Exception:
+            pass
+        time.sleep(60)  # Scan every 60 seconds
+
+# Start background reaper thread immediately
+threading.Thread(target=cleanup_stale_files_loop, daemon=True).start()
 
 class UpscaleHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -30,13 +56,15 @@ class UpscaleHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
         clean_path = parsed.path.lstrip('/')
         
         # Fast direct streaming of output and upload images with proper MIME
         if clean_path.startswith('outputs/') or clean_path.startswith('uploads/'):
             file_path = os.path.join(LAB_DIR, clean_path)
             if os.path.exists(file_path):
-                is_download = 'download=1' in self.path
+                is_download = 'download' in params and params['download'][0] in ('1', 'true')
+                custom_name = params.get('name', [None])[0]
                 self.send_response(200)
                 if file_path.endswith('.png'):
                     self.send_header('Content-Type', 'image/png')
@@ -51,8 +79,8 @@ class UpscaleHandler(SimpleHTTPRequestHandler):
                 self.send_header('Content-Length', str(size))
                 self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
                 if is_download:
-                    filename = os.path.basename(file_path)
-                    self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+                    dl_filename = custom_name if custom_name else os.path.basename(file_path)
+                    self.send_header('Content-Disposition', f'attachment; filename="{dl_filename}"')
                 self.end_headers()
                 
                 with open(file_path, 'rb') as f:
